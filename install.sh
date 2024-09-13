@@ -14,13 +14,13 @@ download_ranges() {
 extract_ips() {
     local isp=$1
     case $isp in
-        "irancell")
+        1) # Irancell
             grep -E "MTN Irancell" iran_ips.html | awk -F'</td><td>' '{print $1}' | sed 's/<td>//g' > irancell_ips.txt
             ;;
-        "mci")
+        2) # MCI (Hamrah Aval)
             grep -E "MCI" iran_ips.html | awk -F'</td><td>' '{print $1}' | sed 's/<td>//g' > mci_ips.txt
             ;;
-        "rightel")
+        3) # Rightel
             grep -E "Rightel" iran_ips.html | awk -F'</td><td>' '{print $1}' | sed 's/<td>//g' > rightel_ips.txt
             ;;
         *)
@@ -39,24 +39,48 @@ block_ips() {
     sudo ufw reload
 }
 
-# انتخاب ISP
-echo "کدام ISP را می‌خواهید مسدود کنید؟ (irancell, mci, rightel)"
-read isp
+# بازنشانی تنظیمات UFW
+reset_ufw() {
+    echo "بازنشانی تنظیمات UFW به حالت اولیه..."
+    sudo ufw reset
+    sudo ufw enable
+}
 
-# اجرای مراحل
-download_ranges
-extract_ips $isp
+# انتخاب عملیات
+echo "چه کاری می‌خواهید انجام دهید؟"
+echo "1. مسدود کردن رنج‌های IP"
+echo "2. بازنشانی تنظیمات به حالت اولیه"
+read action
 
-case $isp in
-    "irancell")
-        block_ips "irancell_ips.txt"
-        ;;
-    "mci")
-        block_ips "mci_ips.txt"
-        ;;
-    "rightel")
-        block_ips "rightel_ips.txt"
-        ;;
-esac
+if [ "$action" -eq 1 ]; then
+    # انتخاب ISP
+    echo "کدام ISP را می‌خواهید مسدود کنید؟"
+    echo "1. ایرانسل"
+    echo "2. همراه اول"
+    echo "3. رایتل"
+    read isp
 
-echo "رنج‌های IP برای $isp مسدود شدند."
+    # اجرای مراحل
+    download_ranges
+    extract_ips $isp
+
+    case $isp in
+        1)
+            block_ips "irancell_ips.txt"
+            ;;
+        2)
+            block_ips "mci_ips.txt"
+            ;;
+        3)
+            block_ips "rightel_ips.txt"
+            ;;
+    esac
+
+    echo "رنج‌های IP برای ISP انتخابی مسدود شدند."
+    
+elif [ "$action" -eq 2 ]; then
+    reset_ufw
+    echo "تنظیمات UFW به حالت اولیه بازنشانی شد."
+else
+    echo "عملیات نامعتبر است!"
+fi
